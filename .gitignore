@@ -1,7 +1,6 @@
 .DS_Store
 .ipynb_checkpoints/
 covid-19-data/
-.xls
-.xlsx
-.pdf
-
+*.xls
+*.xlsx
+*.pdf
