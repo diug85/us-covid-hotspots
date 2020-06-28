@@ -1,5 +1,4 @@
 requests
-csv
 smtplib
 pandas
 numpy
