@@ -1,0 +1,6 @@
+requests
+csv
+smtplib
+pandas
+numpy
+PyPDF2

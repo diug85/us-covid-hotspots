@@ -220,37 +220,37 @@ def send_mail(to, subject, body, attachment=[]):
 
 
 if __name__=="__main__":
-    # base_date = '2020-05-15'
-    #
-    # data = get_csv_file()
-    # grouped = data.groupby(['state','county'], sort=False)
-    # trends = grouped.apply(lambda x: transform_data(x, base_date))
-    # latest_cases = cases_summary(trends)
-    # clusters = latest_cases['cluster']
-    #
-    # trends = trends.merge(clusters, how='left', left_on=['state','county'], right_index=True)
-    # top_by_new_cases = latest_cases.groupby('cluster').apply(top_counties, 'cases_mov_avg', 5)
-    # top_by_increase_rate = latest_cases.groupby('cluster').apply(top_counties, 'scaled_mov_avg', 5)
-    #
-    # for i in range(1,4):
-    #     cluster_ = filter_by_cluster_date(trends, latest_cases, i, base_date)
-    #
-    #     plot_title = 'TOTAL CASES\nCluster '+str(i)
-    #     file_name = 'total_cases_cluster_' + str(i) + '.pdf'
-    #     plot_cluster(cluster_, top_by_new_cases[i], 'cases_mov_avg', plot_title, file_name)
-    #
-    #     plot_title = 'SCALED TOTAL CASES \nBase: ' + base_date +'\nCluster '+str(i)
-    #     file_name = 'scaled_cases_cluster_' + str(i) + '.pdf'
-    #     plot_cluster(cluster_, top_by_increase_rate[i], 'scaled_mov_avg', plot_title, file_name)
-    #
-    # deltas = df_deltas(trends)
+    base_date = '2020-05-15'
+
+    data = get_csv_file()
+    grouped = data.groupby(['state','county'], sort=False)
+    trends = grouped.apply(lambda x: transform_data(x, base_date))
+    latest_cases = cases_summary(trends)
+    clusters = latest_cases['cluster']
+
+    trends = trends.merge(clusters, how='left', left_on=['state','county'], right_index=True)
+    top_by_new_cases = latest_cases.groupby('cluster').apply(top_counties, 'cases_mov_avg', 5)
+    top_by_increase_rate = latest_cases.groupby('cluster').apply(top_counties, 'scaled_mov_avg', 5)
+
+    for i in range(1,4):
+        cluster_ = filter_by_cluster_date(trends, latest_cases, i, base_date)
+
+        plot_title = 'TOTAL CASES\nCluster '+str(i)
+        file_name = 'total_cases_cluster_' + str(i) + '.pdf'
+        plot_cluster(cluster_, top_by_new_cases[i], 'cases_mov_avg', plot_title, file_name)
+
+        plot_title = 'SCALED TOTAL CASES \nBase: ' + base_date +'\nCluster '+str(i)
+        file_name = 'scaled_cases_cluster_' + str(i) + '.pdf'
+        plot_cluster(cluster_, top_by_increase_rate[i], 'scaled_mov_avg', plot_title, file_name)
+
+    deltas = df_deltas(trends)
     file_name = 'covid_track_' + str(dt.date.today())
-    # export_xlsx(deltas, file_name + '.xlsx')
-    #
-    # pdf_list = ['total_cases_cluster_1.pdf', 'scaled_cases_cluster_1.pdf',
-    #             'total_cases_cluster_2.pdf', 'scaled_cases_cluster_2.pdf',
-    #             'total_cases_cluster_3.pdf', 'scaled_cases_cluster_3.pdf']
-    #
-    # merge_pdfs(pdf_list, file_name + '.pdf')
+    export_xlsx(deltas, file_name + '.xlsx')
+
+    pdf_list = ['total_cases_cluster_1.pdf', 'scaled_cases_cluster_1.pdf',
+                'total_cases_cluster_2.pdf', 'scaled_cases_cluster_2.pdf',
+                'total_cases_cluster_3.pdf', 'scaled_cases_cluster_3.pdf']
+
+    merge_pdfs(pdf_list, file_name + '.pdf')
 
     send_mail(['diug85@gmail.com'], 'TEST: covid tracker', 'body', attachment=[file_name + '.xlsx', file_name + '.pdf'])
