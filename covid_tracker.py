@@ -12,8 +12,15 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 
-FROM = 'brown.institute.heroku@gmail.com'#os.environ.get('FROM')
-PASSW = 'trumptown1'#os.environ.get('PASSW')
+FROM = os.environ.get('FROM')
+PASSW = os.environ.get('PASSW')
+TO = ['du2160@columbia.edu',
+        'gmg2172@columbia.edu',
+        'kas2317@columbia.edu',
+        'mh3287@columbia.edu',
+        'juan.saldarriaga@columbia.edu',
+        'alexander.c@columbia.edu']
+SUBJECT = '[AUTOMATED] Covid tracker {}'
 
 def get_csv_file():
     '''
@@ -221,6 +228,7 @@ def send_mail(to, subject, body, attachment=[]):
 
 if __name__=="__main__":
     base_date = '2020-05-15'
+    today = str(dt.date.today())
 
     data = get_csv_file()
     grouped = data.groupby(['state','county'], sort=False)
@@ -244,7 +252,7 @@ if __name__=="__main__":
         plot_cluster(cluster_, top_by_increase_rate[i], 'scaled_mov_avg', plot_title, file_name)
 
     deltas = df_deltas(trends)
-    file_name = 'covid_track_' + str(dt.date.today())
+    file_name = 'covid_track_' + today
     export_xlsx(deltas, file_name + '.xlsx')
 
     pdf_list = ['total_cases_cluster_1.pdf', 'scaled_cases_cluster_1.pdf',
@@ -253,4 +261,4 @@ if __name__=="__main__":
 
     merge_pdfs(pdf_list, file_name + '.pdf')
 
-    send_mail(['diug85@gmail.com'], 'TEST: covid tracker', 'body', attachment=[file_name + '.xlsx', file_name + '.pdf'])
+    send_mail(TO, SUBJECT.format(today), '', attachment=[file_name + '.xlsx', file_name + '.pdf'])
