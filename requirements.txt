@@ -1,5 +1,4 @@
 requests
-smtplib
 pandas
 numpy
 PyPDF2
