@@ -177,10 +177,10 @@ def df_deltas(trends):
     df_dates = trends.date.drop_duplicates().nlargest(2) # get last 2 dates
     # day before
     idx = trends.date==df_dates.iloc[1]
-    A = trends[idx].reset_index(drop=True).set_index(['state','county'])
+    A = trends[idx].reset_index(drop=True).set_index(['state','county']).sort_values(['cluster','cases'], ascending=[False, False])
     # latest date
     idx = trends.date==df_dates.iloc[0]
-    B = trends[idx].reset_index(drop=True).set_index(['state','county'])
+    B = trends[idx].reset_index(drop=True).set_index(['state','county']).sort_values(['cluster','cases'], ascending=[False, False])
 
     output_dct = {str(df_dates.iloc[1])[:10]: A,
                   str(df_dates.iloc[0])[:10]: B,
