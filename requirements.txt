@@ -1,5 +1,7 @@
+PyPDF2
+scikit-learn
 matplotlib
 requests
 pandas
 numpy
-PyPDF2
+openpyxl

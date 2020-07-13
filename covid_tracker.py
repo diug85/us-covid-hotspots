@@ -12,10 +12,12 @@ from os.path import basename
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
+from sklearn.mixture import GaussianMixture
 
-FROM = os.environ.get('FROM')
-PASSW = os.environ.get('PASSW')
-TO = ['du2160@columbia.edu',
+FROM = 'brown.institute.heroku@gmail.com' # os.environ.get('FROM')
+PASSW = 'trumptown1' # os.environ.get('PASSW')
+TO = ['drk2134@columbia.edu ',
+        'du2160@columbia.edu',
         'gmg2172@columbia.edu',
         'kas2317@columbia.edu',
         'mh3287@columbia.edu',
@@ -96,19 +98,26 @@ def scale(grouped, date='2020-05-15'):
     return scaled
 
 
-def cluster_county(cases):
+def cluster_county_manual(cases):
     if cases<=500:
-        return 1
+        return 0
     elif cases<=4000:
-        return 2
+        return 1
     else:
-        return 3
+        return 2
+
+def cluster_county_gaussian(latest_cases, n_clusters=4, random_state=0):
+    gaussian = GaussianMixture(n_clusters, random_state=random_state)
+    X = latest_cases.cases.to_numpy().reshape(-1, 1)
+    gaussian.fit(X)
+    clusters = gaussian.predict(X)
+
+    return pd.DataFrame(clusters+1, index=latest_cases.index, columns=['cluster'])
 
 
 def cases_summary(trends):
     grouped_trends = trends.groupby(['state','county'], sort=False)
     latest = grouped_trends.last()
-    latest['cluster'] = latest.cases.transform(cluster_county)
     return latest
 
 
@@ -117,7 +126,7 @@ def top_counties(trends, by, top=5):
     return list(largest.index)
 
 
-def filter_by_cluster_date(trends, latest_cases, cluster_no, date):
+def filter_by_cluster_date(trends, cluster_no, date):
     idx = (trends.date>=base_date) & (trends.cluster==cluster_no)
     return trends[idx]
 
@@ -135,6 +144,7 @@ def plot_county(df, ax, in_color, state=None, county=None):
 
 def plot_cluster(df, colored_list, y_column, title, file_name=None, n=250):
     counties = df[['state','county']].drop_duplicates()
+    title = '{title} ({cnt} counties)'.format(title=title, cnt=len(counties))
 
     fig, ax = plt.subplots(figsize=(16,8))
     ax.set_title(title)
@@ -157,11 +167,10 @@ def plot_cluster(df, colored_list, y_column, title, file_name=None, n=250):
         if i==n:
             break
 
-    y_max = 0
+    y_max = 1
     for state, county in colored_list:
         idx = (df.state==state) & (df.county==county)
         y_max = max(y_max, df[idx][y_column].max())
-
         plot_county(df=df[idx][['date',y_column]],
                     ax=ax,
                     in_color=True,
@@ -174,13 +183,22 @@ def plot_cluster(df, colored_list, y_column, title, file_name=None, n=250):
         fig.savefig(file_name)
 
 def df_deltas(trends):
+    column_names = ['date','total_cases', 'new_cases','new_cases_ma','scaled_new_cases_ma','cluster']
     df_dates = trends.date.drop_duplicates().nlargest(2) # get last 2 dates
     # latest date
     idx = trends.date==df_dates.iloc[0]
-    B = trends[idx].reset_index(drop=True).set_index(['state','county']).sort_values(['cluster','cases'], ascending=[False, False])
+    B = trends[idx].reset_index(drop=True).set_index(['state','county'])
+    B.columns = column_names
     # day before
     idx = trends.date==df_dates.iloc[1]
-    A = trends[idx].reset_index(drop=True).set_index(['state','county']).reindex(B.index)
+    A = trends[idx].reset_index(drop=True).set_index(['state','county'])
+    A.columns = column_names
+    # deltas
+    deltas = B-A
+    deltas = deltas.sort_values(['cluster','new_cases_ma'], ascending=[True, False])
+    # re-order A and B
+    A = A.reindex(deltas.index)
+    B = B.reindex(deltas.index)
 
     output_dct = {str(df_dates.iloc[1])[:10]: A,
                   str(df_dates.iloc[0])[:10]: B,
@@ -229,37 +247,38 @@ def send_mail(to, subject, body, attachment=[]):
 
 if __name__=="__main__":
     base_date = '2020-05-15'
+    n_clusters = 4
     today = str(dt.date.today())
 
     data = get_csv_file()
     grouped = data.groupby(['state','county'], sort=False)
     trends = grouped.apply(lambda x: transform_data(x, base_date))
     latest_cases = cases_summary(trends)
-    clusters = latest_cases['cluster']
+    clusters = cluster_county_gaussian(latest_cases, n_clusters=n_clusters, random_state=0)
+    latest_cases['cluster'] = clusters.cluster
 
     trends = trends.merge(clusters, how='left', left_on=['state','county'], right_index=True)
     top_by_new_cases = latest_cases.groupby('cluster').apply(top_counties, 'cases_mov_avg', 5)
     top_by_increase_rate = latest_cases.groupby('cluster').apply(top_counties, 'scaled_mov_avg', 5)
 
-    for i in range(1,4):
-        cluster_ = filter_by_cluster_date(trends, latest_cases, i, base_date)
+    for i in range(1, n_clusters+1):
+        cluster_ = filter_by_cluster_date(trends, i, base_date)
 
-        plot_title = 'TOTAL CASES\nCluster '+str(i)
-        file_name = 'total_cases_cluster_' + str(i) + '.pdf'
+        plot_title = 'NEW CASES\nCluster ' + str(i) + '\n'
+        file_name = 'new_cases_cluster_' + str(i) + '.pdf'
         plot_cluster(cluster_, top_by_new_cases[i], 'cases_mov_avg', plot_title, file_name)
 
-        plot_title = 'SCALED TOTAL CASES \nBase: ' + base_date +'\nCluster '+str(i)
-        file_name = 'scaled_cases_cluster_' + str(i) + '.pdf'
+        plot_title = 'SCALED NEW CASES \nBase: ' + base_date +'\nCluster ' + str(i) + '\n'
+        file_name = 'scaled_new_cases_cluster_' + str(i) + '.pdf'
         plot_cluster(cluster_, top_by_increase_rate[i], 'scaled_mov_avg', plot_title, file_name)
 
     deltas = df_deltas(trends)
     file_name = 'covid_track_' + today
     export_xlsx(deltas, file_name + '.xlsx')
 
-    pdf_list = ['total_cases_cluster_1.pdf', 'scaled_cases_cluster_1.pdf',
-                'total_cases_cluster_2.pdf', 'scaled_cases_cluster_2.pdf',
-                'total_cases_cluster_3.pdf', 'scaled_cases_cluster_3.pdf']
+    pdf_list = ['new_cases_cluster_{}.pdf'.format(i) for i in range(1, n_clusters+1)] + ['scaled_new_cases_cluster_{}.pdf'.format(i) for i in range(1, n_clusters+1)]
 
     merge_pdfs(pdf_list, file_name + '.pdf')
-
-    send_mail(TO, SUBJECT.format(today), '', attachment=[file_name + '.xlsx', file_name + '.pdf'])
+    #
+    # send_mail( TO, SUBJECT.format(today), '', attachment=[file_name + '.xlsx', file_name + '.pdf'])
+    send_mail(['ivan.u@columbia.edu'], SUBJECT.format(today), '', attachment=[file_name + '.xlsx', file_name + '.pdf'])
