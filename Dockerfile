@@ -5,6 +5,7 @@ FROM python:3.7-slim
 WORKDIR /app
 
 # Copy the current directory contents into the container at /app
+COPY ./distribution_list.txt /app
 COPY ./covid_tracker.py /app
 COPY ./requirements.txt /app
 

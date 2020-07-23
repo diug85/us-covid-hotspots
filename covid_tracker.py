@@ -14,16 +14,12 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 from sklearn.mixture import GaussianMixture
 
-FROM = 'brown.institute.heroku@gmail.com' # os.environ.get('FROM')
-PASSW = 'trumptown1' # os.environ.get('PASSW')
-TO = ['drk2134@columbia.edu ',
-        'du2160@columbia.edu',
-        'gmg2172@columbia.edu',
-        'kas2317@columbia.edu',
-        'mh3287@columbia.edu',
-        'juan.saldarriaga@columbia.edu',
-        'alexander.c@columbia.edu']
+FROM = os.environ.get('FROM')
+PASSW = os.environ.get('PASSW')
 SUBJECT = '[AUTOMATED] Covid tracker {}'
+
+with open('distribution_list.txt', 'r') as f:
+    TO = f.readline().strip().split(',')
 
 def get_csv_file():
     '''
@@ -279,6 +275,5 @@ if __name__=="__main__":
     pdf_list = ['new_cases_cluster_{}.pdf'.format(i) for i in range(1, n_clusters+1)] + ['scaled_new_cases_cluster_{}.pdf'.format(i) for i in range(1, n_clusters+1)]
 
     merge_pdfs(pdf_list, file_name + '.pdf')
-    #
-    # send_mail( TO, SUBJECT.format(today), '', attachment=[file_name + '.xlsx', file_name + '.pdf'])
-    send_mail(['ivan.u@columbia.edu'], SUBJECT.format(today), '', attachment=[file_name + '.xlsx', file_name + '.pdf'])
+
+    send_mail( TO, SUBJECT.format(today), '', attachment=[file_name + '.xlsx', file_name + '.pdf'])
